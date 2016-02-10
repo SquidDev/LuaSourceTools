@@ -114,7 +114,7 @@ local ENABLE_FOLDING = false -- disabled since still occasionally triggers OnSty
 
 local LI = require "luainspect.init"
 local LA = require "luainspect.ast"
-local LD = require "luainspect.dump"
+local LD = require "metalua.pprint"
 local T = require "luainspect.types"
 
 local M = {}
@@ -367,7 +367,7 @@ local function update_ast()
 			end
 			if LUAINSPECT_DEBUG then
 				DEBUG(LA.dump_tokenlist(buffer.tokenlist))
-				DEBUG(LD.dumpstring(buffer.ast))
+				DEBUG(LD.tostring(buffer.ast))
 				--DEBUG(table.tostring(buffer.ast, 20))
 			end
 		end

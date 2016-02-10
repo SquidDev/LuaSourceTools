@@ -13,7 +13,7 @@ local M = {}
 M.APIVERSION = 0.20100805
 
 local LA = require "luainspect.ast"
-local LD = require "luainspect.dump"
+local LD = require "metalua.pprint"
 local LG = require "luainspect.globals"
 local LS = require "luainspect.signatures"
 local T = require "luainspect.types"
