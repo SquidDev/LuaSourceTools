@@ -1,7 +1,7 @@
 --- Annotate nodes with their scope, usages and parents
--- @module metalua.annotate
+-- @module sourcetools.annotate
 
-local walk = require "metalua.walk"
+local walk = require "sourcetools.walk"
 local pp = require "metalua.pprint"
 
 local setmetatable, ipairs, insert = setmetatable, ipairs, table.insert
@@ -80,7 +80,7 @@ local globalMeta = {
 	end
 }
 
-local visitor = {
+return {
 	scope = function(current)
 		local vars = { }
 
@@ -155,5 +155,3 @@ local visitor = {
 		node.var = var
 	end,
 }
-
-return visitor

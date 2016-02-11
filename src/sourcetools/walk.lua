@@ -1,5 +1,5 @@
 --- Basic traversal library for nodes.
--- @module metalua.walk
+-- @module sourcetools.walk
 
 local pp = require 'metalua.pprint'
 
