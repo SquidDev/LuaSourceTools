@@ -6,12 +6,13 @@ local pp = require 'metalua.pprint'
 local ipairs = ipairs
 
 --- Make a scope
+-- @tparam Node node The node this scope belongs to
 -- @tparam Scope? scope The scope to create
 -- @treturn Scope the child scope
-local function makeScope(visitor, scope)
+local function makeScope(visitor, node, scope)
 	local factory = visitor.scope
 	if factory then
-		return factory(scope)
+		return factory(node, scope)
 	else
 		return nil
 	end
@@ -39,7 +40,7 @@ local function wrapTraverser(traverse)
 	return function(node, parent, visitor, scope)
 		local down, up = visitor.down, visitor.up
 
-		if down and down(node, parent, scope) ~= false then
+		if not down or down(node, parent, scope) ~= false then
 			traverse(node, parent, visitor, scope)
 		end
 
@@ -63,12 +64,18 @@ end
 --- A traverser that looks up using the tag
 -- @tparam {string=Traverser} traversers Lookup of traverse to delegate to
 -- @treturn Traverser The formed traverser
-local function tagTraverser(traversers)
+local function tagTraverser(traversers, category)
+	local upCat, downCat = "up" .. category, "down" .. category
 	return function(node, parent, visitor, scope)
 		local tag = node.tag
 		if not tag then error("Node with no tag: " .. pp.tostring(node)) end
 
-		local nodeVisitor = visitor["down" .. tag]
+		local nodeVisitor = visitor[downCat]
+		if nodeVisitor and nodeVisitor(node, parent, scope) == false then
+			return
+		end
+
+		nodeVisitor = visitor["down" .. tag]
 		if nodeVisitor and nodeVisitor(node, parent, scope) == false then
 			return
 		end
@@ -81,9 +88,10 @@ local function tagTraverser(traversers)
 		traverser(node, parent, visitor, scope)
 
 		nodeVisitor = visitor["up" .. tag]
-		if nodeVisitor then
-			nodeVisitor(node, parent, scope)
-		end
+		if nodeVisitor then nodeVisitor(node, parent, scope) end
+
+		nodeVisitor = visitor[upCat]
+		if nodeVisitor then nodeVisitor(node, parent, scope) end
 	end
 end
 
@@ -105,9 +113,11 @@ local stat = {
 	Label = empty,
 }
 
+local table = { }
+
 --- Traverse statements
 -- @inherit Traverser
-local statT = wrapTraverser(tagTraverser(stat))
+local statT = wrapTraverser(tagTraverser(stat, "Statement"))
 
 --- Traverse a list of statements
 -- @inherit Traverser
@@ -115,11 +125,13 @@ local statLT = wrapTraverser(listTraverser(statT))
 
 --- Traverse an expression
 -- @inherit Traverser
-local exprT = wrapTraverser(tagTraverser(expr))
+local exprT = wrapTraverser(tagTraverser(expr, "Expression"))
 
 --- Traverse a list of expressions
 -- @inherit Traverser
 local exprLT = wrapTraverser(listTraverser(exprT))
+
+local tableT = wrapTraverser(tagTraverser(table, "Table"))
 
 --- Traverse a declaration
 -- @inherit Traverser
@@ -144,7 +156,7 @@ end)
 
 -- Statements
 function stat.Do(node, parent, visitor, scope)
-	statLT(node, node, visitor, makeScope(visitor, scope))
+	statLT(node, node, visitor, makeScope(visitor, node, scope))
 end
 
 function stat.Set(node, parent, visitor, scope)
@@ -154,11 +166,11 @@ end
 
 function stat.While(node, parent, visitor, scope)
 	exprT(node[1], node, visitor, scope)
-	statLT(node[2], node, visitor, makeScope(visitor, scope))
+	statLT(node[2], node, visitor, makeScope(visitor, node, scope))
 end
 
 function stat.Repeat(node, parent, visitor, scope)
-	local childScope = makeScope(visitor, scope)
+	local childScope = makeScope(visitor, node, scope)
 	statLT(node[1], node, visitor, childScope)
 	exprT(node[2], node, visitor, childScope)
 end
@@ -186,7 +198,7 @@ function stat.Fornum(node, parent, visitor, scope)
 		exprT(node[4], node, visitor, scope)
 	end
 
-	local childScope = makeScope(visitor, scope)
+	local childScope = makeScope(visitor, node, scope)
 	declT(node[1], node, visitor, childScope)
 	statLT(body, node, visitor, childScope)
 end
@@ -194,7 +206,7 @@ end
 function stat.Forin(node, parent, visitor, scope)
 	exprLT(node[2], node, visitor, scope)
 
-	local childScope = makeScope(visitor, scope)
+	local childScope = makeScope(visitor, node, scope)
 	declLT(node[1], node, visitor, childScope)
 	statLT(node[3], node, visitor, childScope)
 end
@@ -202,11 +214,11 @@ end
 function stat.If(node, parent, visitor, scope)
 	for i = 1, #node - 1, 2 do
 		exprLT(node[i], node, visitor, scope)
-		statLT(node[i + 1], node, visitor, makeScope(visitor, scope))
+		statLT(node[i + 1], node, visitor, makeScope(visitor, node, scope))
 	end
 
 	if #node % 2 == 1 then
-		statLT(node[#node], node, visitor, makeScope(visitor, scope))
+		statLT(node[#node], node, visitor, makeScope(visitor, node, scope))
 	end
 end
 
@@ -236,13 +248,13 @@ function expr.Op(node, parent, visitor, scope)
 end
 
 function expr.Function(node, parent, visitor, scope)
-	local childScope = makeScope(visitor, scope)
+	local childScope = makeScope(visitor, node, scope)
 	declLT(node[1], node, visitor, childScope)
 	statLT(node[2], node, visitor, childScope)
 end
 
 function expr.Stat(node, parent, visitor, scope)
-	local childScope = makeScope(visitor, scope)
+	local childScope = makeScope(visitor, node, scope)
 	statLT(node[1], node, visitor, childScope)
 	exprLT(node[2], node, visitor, childScope)
 end
@@ -250,12 +262,16 @@ end
 function expr.Table(node, parent, visitor, scope)
 	for _, item in ipairs(node) do
 		if item.tag == "Pair" then
-			exprT(item[1], node, visitor, scope)
-			exprT(item[2], node, visitor, scope)
+			tableT(item, node, visitor, scope)
 		else
 			exprT(item, node, visitor, scope)
 		end
 	end
+end
+
+function table.Pair(node, parent, visitor, scope)
+	exprT(node[1], node, visitor, scope)
+	exprT(node[2], node, visitor, scope)
 end
 
 --- Add an expression traverser

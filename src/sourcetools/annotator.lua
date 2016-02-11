@@ -81,14 +81,22 @@ local globalMeta = {
 }
 
 return {
-	scope = function(current)
+	scope = function(node, current)
 		local vars = { }
 
 		local scope = {
+			node = node,
 			parent = current,
 			vars = vars,
 			children = {},
 		}
+
+		local tag = node and node.tag
+		if tag == "Function" then
+			scope.func = tag
+		elseif current then
+			scope.func = current.parent.func
+		end
 
 		if current then
 			setmetatable(vars, { __index = current.vars})
@@ -146,6 +154,7 @@ return {
 		local name = getName(node)
 
 		local var = {
+			name = name,
 			hides = scope.vars[name],
 			references = {},
 			declaration = nil,

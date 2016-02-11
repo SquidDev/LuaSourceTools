@@ -6,12 +6,13 @@ local M = { }
 local insert = table.insert
 
 M.DEFAULT_CFG = {
-	hide_hash   = false; -- Print the non-array part of tables?
-	metalua_tag = true;  -- Use Metalua's backtick syntax sugar?
-	keywords    = { };   -- Set of keywords which must not use Lua's field shortcuts {["foo"]=...} -> {foo=...}
-	blacklist = { };     -- Set of fields to not display
-	max_depth = -1;      -- Max depth to traverse
-	with_name = false;   -- If the field 'name' exists, print that instead.
+	hide_hash   = false, -- Print the non-array part of tables?
+	metalua_tag = true,  -- Use Metalua's backtick syntax sugar?
+	keywords    = { },   -- Set of keywords which must not use Lua's field shortcuts {["foo"]=...} -> {foo=...}
+	blacklist = { },     -- Set of fields to not display
+	max_depth = -1,      -- Max depth to traverse
+	with_name = false,   -- If the field 'name' exists, print that instead.
+	repeats = true,      -- Allow repeating nodes if not nested
 }
 
 local function validId(x, cfg)
@@ -117,7 +118,7 @@ local function serializeImplicit(object, data)
 		insert(data, "}")
 
 		-- Allow repeated but not recursive entries
-		data.visited[object] = false
+		if data.repeats then data.visited[object] = false end
 	else
 		insert(data, tostring(object))
 	end
