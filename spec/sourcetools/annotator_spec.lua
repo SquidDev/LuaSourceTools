@@ -1,6 +1,6 @@
 describe("annotator", function()
-	local walk = require "metalua.walk"
-	local annotator = require "metalua.annotator"
+	local walk = require "sourcetools.walk"
+	local annotator = require "sourcetools.annotator"
 
 	it("local", function()
 		local id = { tag = "Id", "foo" }
