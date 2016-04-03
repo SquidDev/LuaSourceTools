@@ -42,15 +42,15 @@ local function getopt(c)
 	end
 end
 
-local fmt = getopt 'f' or 'delimited'
+local fmt = getopt 'f' or 'html'
 local ast_to_text =
 	(fmt == 'delimited') and require 'luainspect.delimited'.ast_to_delimited or
 	(fmt == 'html') and require 'luainspect.html'.ast_to_html or
 	fail('invalid format specified, -f'..fmt)
-local libpath = getopt 'l' or '.'
-local outpath = getopt 'o' or '-'
+local libpath = getopt 'l' or 'htmllib'
+local outpath = getopt 'o'
 
-local path = unpack(arg)
+local path = arg[1]
 if not path then
 	fail[[
 inspect.lua [options] <path.lua>
@@ -60,8 +60,9 @@ inspect.lua [options] <path.lua>
 ]]
 end
 
-local src = loadfile(path)
+if not outpath then outpath = path:gsub("%.lua$", "%.html") end
 
+local src = loadfile(path)
 
 local ast, err, linenum, colnum, linenum2 = LA.ast_from_string(src, path)
 
@@ -73,7 +74,7 @@ if ast then
 
 	local output = ast_to_text(ast, src, tokenlist, {libpath=libpath})
 
-	if outpath == '-' then
+	if outpath == nil then
 		io.stdout:write(output)
 	else
 		writefile(outpath, output)
