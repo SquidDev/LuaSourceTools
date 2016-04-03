@@ -23,6 +23,13 @@ print(undefined_global)
 print(math) -- predefined global
 print(defined_global); defined_global = 2; print(defined_global)
 
+-- Unused functions
+local function anUsedFunction() end
+function globalUsedFunction() end
+
+local predeclaredUnused
+function predeclaredUnused() end
+
 -- Scope tests for specific statements
 do local local1; for local1=local1,2 do end end	-- used, unused+mask, used local
 do local local1; for local1 in local1 do end end	-- used, unused+mask, used local

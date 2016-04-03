@@ -37,7 +37,7 @@ end
 --	 ast.isfield is true iff `String node ast is used for field access on object,
 --			e.g. x.y or x['y'].z
 --	 ast.previous - For `Index{o,s} or `Invoke{o,s,...}, s.previous == o
-local function traverse(ast, scope, globals, level, functionlevel)
+local function traverse(ast, scope, globals, level, functionlevel, setter)
 	scope = scope or {}
 
 	local blockrecurse
@@ -62,7 +62,7 @@ local function traverse(ast, scope, globals, level, functionlevel)
 		if scope[name] then
 			ast.localdefinition = scope[name]
 			ast.functionlevel = functionlevel
-			scope[name].isused = true
+			if not setter then scope[name].isused = true end
 		else -- global, do nothing
 		end
 	elseif ast.tag == 'Function' then
@@ -135,6 +135,14 @@ local function traverse(ast, scope, globals, level, functionlevel)
 			name_ast.functionlevel = functionlevel
 		end
 		traverse(block_ast, scope, globals, level+1, functionlevel)
+	elseif ast.tag == 'Set' then
+		local childScope = setmetatable({}, {__index = scope})
+		for _, v in ipairs(ast[1]) do
+			traverse(v, childScope, globals, level + 2, functionlevel, true)
+		end
+
+		local childScope = setmetatable({}, {__index = scope})
+		traverse(ast[2], childScope, globals, level + 1, functionlevel)
 	else -- normal
 		for i,v in ipairs(ast) do
 			if i ~= blockrecurse and type(v) == 'table' then
