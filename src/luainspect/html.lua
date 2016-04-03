@@ -106,4 +106,4 @@ function M.ast_to_html(ast, src, tokenlist, options)
  return src_html
 end
 
-return M
+return M.ast_to_html

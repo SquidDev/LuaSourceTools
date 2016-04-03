@@ -43,10 +43,11 @@ local function getopt(c)
 end
 
 local fmt = getopt 'f' or 'html'
-local ast_to_text =
-	(fmt == 'delimited') and require 'luainspect.delimited'.ast_to_delimited or
-	(fmt == 'html') and require 'luainspect.html'.ast_to_html or
+local success, ast_to_text = pcall(require, 'luainspect.' .. fmt)
+if not success or type(ast_to_text) ~= "function" then
 	fail('invalid format specified, -f'..fmt)
+end
+
 local libpath = getopt 'l' or 'htmllib'
 local outpath = getopt 'o'
 
@@ -54,13 +55,19 @@ local path = arg[1]
 if not path then
 	fail[[
 inspect.lua [options] <path.lua>
-  -f {delimited|html} - output format
+  -f {delimited|html|prompt} - output format
   -l path  path to library sources (e.g. luainspect.css/js), for html only
   -o path  output path (defaults to standard output (-)
 ]]
 end
 
-if not outpath then outpath = path:gsub("%.lua$", "%.html") end
+if not outpath then
+	if fmt == 'html' then
+		outpath = path:gsub("%.lua$", "%.html")
+	else
+		outpath = '-'
+	end
+end
 
 local src = loadfile(path)
 
@@ -74,7 +81,7 @@ if ast then
 
 	local output = ast_to_text(ast, src, tokenlist, {libpath=libpath})
 
-	if outpath == nil then
+	if outpath == '-' then
 		io.stdout:write(output)
 	else
 		writefile(outpath, output)

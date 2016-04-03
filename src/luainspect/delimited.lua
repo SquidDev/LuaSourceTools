@@ -1,10 +1,7 @@
 --- Convert AST to delimited text using LuaInspect info embedded.
 -- @module luainspect.delimited
---
 
 --! require 'luainspect.typecheck' (context)
-
-local M = {}
 
 local LI = require("luainspect.init")
 
@@ -28,7 +25,7 @@ local function describe(token, tokenlist, src)
 	end
 end
 
-function M.ast_to_delimited(ast, src, tokenlist)
+return function(ast, src, tokenlist)
 	local fmt_tokens = {}
 	for _, token in ipairs(tokenlist) do
 		local fchar, lchar = token.fpos, token.lpos
@@ -39,5 +36,3 @@ function M.ast_to_delimited(ast, src, tokenlist)
 	end
 	return table.concat(fmt_tokens)
 end
-
-return M

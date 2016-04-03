@@ -1435,6 +1435,7 @@ function M.get_messages(token, tokenlist, src)
 	if not token or not token.ast then return end
 	local warnings = {}
 	local severity = nil
+	local severityFlags = {}
 
 	local ast = token.ast
 	if ast.localmasking then
@@ -1443,20 +1444,24 @@ function M.get_messages(token, tokenlist, src)
 
 		if severity == nil then severity = "warn" end
 		warnings[#warnings + 1] = "local " .. ast[1] .. " masks another local" .. (pos and " on line " .. linenum or "")
+		severityFlags[#severityFlags + 1] = "warn"
 	end
 	if ast.localdefinition == ast and not ast.isused and not ast.isignore then
 		if severity == nil then severity = "warn" end
 		warnings[#warnings + 1] = "unused local " .. ast[1]
+		severityFlags[#severityFlags + 1] = "warn"
 	end
 	if ast.isfield and not(known(ast.seevalue.value) and ast.seevalue.value ~= nil) then
 		severity = "error"
 		warnings[#warnings + 1] = "unknown field " .. ast[1]
+		severityFlags[#severityFlags + 1] = "error"
 	elseif ast.tag == 'Id' and not ast.localdefinition and not ast.definedglobal then
 		severity = "error"
 		warnings[#warnings + 1] = "unknown global " .. ast[1]
+		severityFlags[#severityFlags + 1] = "warn"
 	end
 
-	return severity, warnings
+	return severity, warnings, severityFlags
 end
 
 
